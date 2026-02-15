@@ -1,0 +1,20 @@
+Port {{ ssh_port }}
+Protocol 2
+
+PermitRootLogin no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+ChallengeResponseAuthentication no
+
+PubkeyAuthentication yes
+AuthorizedKeysFile .ssh/authorized_keys
+
+AllowUsers {{ new_user }}
+
+UsePAM yes
+X11Forwarding no
+AllowAgentForwarding yes
+AllowTcpForwarding yes
+
+ClientAliveInterval 300
+ClientAliveCountMax 2

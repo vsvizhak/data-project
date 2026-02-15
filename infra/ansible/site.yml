@@ -1,0 +1,144 @@
+- hosts: all
+  become: true
+
+  tasks:
+    - name: Update apt cache and upgrade
+      apt:
+        update_cache: true
+        upgrade: dist
+
+    - name: Install base packages
+      apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - ufw
+          - fail2ban
+        state: present
+
+    - name: Create user
+      user:
+        name: "{{ new_user }}"
+        groups: sudo
+        append: true
+        shell: /bin/bash
+        create_home: true
+
+    - name: Allow passwordless sudo for deploy
+      copy:
+        dest: "/etc/sudoers.d/{{ new_user }}"
+        content: "{{ new_user }} ALL=(ALL) NOPASSWD:ALL\n"
+        owner: root
+        group: root
+        mode: "0440"
+
+    - name: Validate sudoers
+      command: visudo -cf /etc/sudoers
+
+    - name: Authorize SSH key for user
+      authorized_key:
+        user: "{{ new_user }}"
+        state: present
+        key: "{{ lookup('file', ssh_pubkey_path) }}"
+
+    - name: Wait for SSH to be available
+      wait_for:
+        port: "{{ ssh_port }}"
+        host: "{{ inventory_hostname }}"
+        timeout: 120
+      delegate_to: localhost
+      become: false
+
+    - name: Harden sshd_config
+      template:
+        src: templates/sshd_config.j2
+        dest: /etc/ssh/sshd_config
+        mode: "0644"
+      notify:
+        - Validate sshd config
+        - Restart ssh
+
+    - name: Configure fail2ban for sshd
+      template:
+        src: templates/jail.local.j2
+        dest: /etc/fail2ban/jail.local
+        mode: "0644"
+      notify: Restart fail2ban
+
+    - name: Allow SSH
+      ufw:
+        rule: allow
+        port: "{{ ssh_port }}"
+        proto: tcp
+
+    - name: Enable UFW (deny by default)
+      ufw:
+        state: enabled
+        policy: deny
+
+    - name: Install Docker (official repo)
+      block:
+        - name: Add Docker GPG key
+          apt_key:
+            url: https://download.docker.com/linux/ubuntu/gpg
+            state: present
+
+        - name: Add Docker repository
+          apt_repository:
+            repo: "deb [arch={{ 'arm64' if ansible_architecture in ['aarch64', 'arm64'] else 'amd64' }}] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+            state: present
+
+        - name: Install Docker packages
+          apt:
+            update_cache: true
+            name:
+              - docker-ce
+              - docker-ce-cli
+              - containerd.io
+              - docker-buildx-plugin
+              - docker-compose-plugin
+            state: present
+
+    - name: Add user to docker group
+      user:
+        name: "{{ new_user }}"
+        groups: docker
+        append: true
+
+    - name: Create project directory
+      file:
+        path: "{{ project_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Upload docker-compose.yml
+      copy:
+        src: "{{ compose_src }}"
+        dest: "{{ project_dir }}/docker-compose.yml"
+        mode: "0644"
+
+    - name: Pull images
+      command: docker compose pull
+      args:
+        chdir: "{{ project_dir }}"
+
+
+    - name: Start stack
+      command: docker compose up -d
+      args:
+        chdir: "{{ project_dir }}"
+
+  handlers:
+    - name: Validate sshd config
+      command: sshd -t
+
+    - name: Restart ssh
+      service:
+        name: ssh
+        state: restarted
+
+    - name: Restart fail2ban
+      service:
+        name: fail2ban
+        state: restarted

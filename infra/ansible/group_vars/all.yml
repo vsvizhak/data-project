@@ -1,0 +1,11 @@
+new_user: deploy
+ssh_port: 22
+
+ssh_pubkey_path: "{{ lookup('env','HOME') + '/.ssh/hc_deploy.pub' }}"
+
+fail2ban_maxretry: 15
+fail2ban_findtime: "10m"
+fail2ban_bantime: "1h"
+
+project_dir: /opt/app
+compose_src: ../../app/docker-compose.yml
