@@ -48,11 +48,19 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/data-project-app:main
 
       - name: Prepare SSH
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
           ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          
+          cat > ~/.ssh/id_ed25519 <<'KEY'
+          ${{ secrets.SSH_PRIVATE_KEY }}
+          KEY
+          sed -i 's/\r$//' ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
+          ssh-keygen -y -f ~/.ssh/id_ed25519 >/dev/null
 
       - name: Upload compose + env and restart stack
         run: |
