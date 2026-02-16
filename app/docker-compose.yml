@@ -1,9 +1,6 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: test
+    image: vasvasl/data-project-app:main
     restart: unless-stopped
     ports:
       - "8000:8000"

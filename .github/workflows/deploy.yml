@@ -33,7 +33,7 @@ jobs:
       - name: Build & push app image
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./app
           file: ./Dockerfile
           push: true
           tags: |
