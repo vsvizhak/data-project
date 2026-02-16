@@ -110,6 +110,8 @@
       file:
         path: "{{ project_dir }}"
         state: directory
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
         mode: "0755"
 
     - name: Upload docker-compose.yml
