@@ -6,6 +6,6 @@ app = FastAPI()
 @app.get("/")
 def read_root():
     return {
-        "message": "testtesttest",
+        "message": "TEST",
         "hostname": os.uname().nodename
     }
