@@ -114,6 +114,13 @@
         group: "{{ new_user }}"
         mode: "0755"
 
+    - name: Ensure project directory ownership
+      file:
+        path: "{{ project_dir }}"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        recurse: true
+
     - name: Upload docker-compose.yml
       copy:
         src: "{{ compose_src }}"
