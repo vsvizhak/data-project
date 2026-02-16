@@ -133,6 +133,9 @@
     - name: Validate sudoers
       command: visudo -cf /etc/sudoers.d/{{ new_user }}
 
+    - name: Validate sshd config
+      command: sshd -t
+
     - name: Restart ssh
       service:
         name: ssh
