@@ -130,8 +130,8 @@
         chdir: "{{ project_dir }}"
 
   handlers:
-    - name: Validate sshd config
-      command: sshd -t
+    - name: Validate sudoers
+      command: visudo -cf /etc/sudoers.d/{{ new_user }}
 
     - name: Restart ssh
       service:
