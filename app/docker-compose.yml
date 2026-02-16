@@ -1,5 +1,13 @@
-#test
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: test
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+
   postgres:
     image: postgres:16
     container_name: pg
@@ -26,7 +34,7 @@ services:
     expose:
       - "9000"
       - "9001"
-      -
+
 volumes:
   pgdata:
   minio_data:
