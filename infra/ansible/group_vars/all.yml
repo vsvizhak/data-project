@@ -9,3 +9,4 @@ fail2ban_bantime: "1h"
 
 project_dir: /opt/app
 compose_src: ../../app/docker-compose.yml
+env_src: ../../app/.env

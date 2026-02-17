@@ -127,16 +127,47 @@
         dest: "{{ project_dir }}/docker-compose.yml"
         mode: "0644"
 
+    - name: Upload .env
+      copy:
+        src: "{{ env_src }}"
+        dest: "{{ project_dir }}/.env"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        mode: "0644"
+
     - name: Pull images
       command: docker compose pull
       args:
         chdir: "{{ project_dir }}"
+      async: 600
+      poll: 15
 
+    - name: Stop and clean previous stack
+      command: docker compose down --remove-orphans
+      args:
+        chdir: "{{ project_dir }}"
+      become: true
+      become_user: "{{ new_user }}"
+      ignore_errors: true
+
+    - name: Create Airflow directories (dags, logs, plugins)
+      file:
+        path: "{{ project_dir }}/{{ item }}"
+        state: directory
+        owner: "50000"
+        group: "0"
+        mode: "0775"
+      loop:
+        - dags
+        - logs
+        - plugins
 
     - name: Start stack
       command: docker compose up -d
       args:
         chdir: "{{ project_dir }}"
+      become: true
+      become_user: "{{ new_user }}"
 
   handlers:
     - name: Validate sudoers
