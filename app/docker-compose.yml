@@ -28,9 +28,17 @@ services:
     ports:
       - "8000:8000"
 
-  dbt-trino:
-    image: vasvasl/dbt-trino-app:main
-    restart: always
+  dbt:
+    build:
+      context: .
+      dockerfile: dbt/Dockerfile
+    container_name: dbt
+    volumes:
+      - ./dbt:/app
+    depends_on:
+      - trino
+    environment:
+      DBT_PROFILES_DIR: /app
 
   postgres-source:
     image: postgres:16
