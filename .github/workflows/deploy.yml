@@ -63,12 +63,26 @@ jobs:
           ssh-keygen -y -f ~/.ssh/id_ed25519 >/dev/null
 
       - name: Upload compose + env and restart stack
+        shell: bash
         run: |
-          scp -i ~/.ssh/id_ed25519 app/docker-compose.yml ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/app/docker-compose.yml
-          ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << EOF
-            set -e
+          set -euo pipefail
+
+          # Upload to a writable location first
+          scp -i ~/.ssh/id_ed25519 app/docker-compose.yml \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/docker-compose.yml
+
+          # Apply on server with sudo, then restart
+          ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} <<'EOF'
+            set -euo pipefail
+
+            sudo mkdir -p /opt/app
+            sudo chown -R ${USER}:${USER} /opt/app || true
+
+            sudo mv /tmp/docker-compose.yml /opt/app/docker-compose.yml
             cd /opt/app
+
             echo "TAG=${TAG}" > .env
+
             docker compose pull
             docker compose up -d --remove-orphans
           EOF
