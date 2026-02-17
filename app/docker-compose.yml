@@ -29,7 +29,7 @@ services:
       - "8000:8000"
 
   dbt:
-    image: vasvasl/dbt-trino:main
+    image: vasvasl/dbt-trino-app:main
     volumes:
       - ./dbt:/app
     environment:
