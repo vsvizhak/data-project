@@ -12,9 +12,12 @@ terraform {
   }
 }
 
+variable "server_type" {
+  type = string
+  default = "cax41" #arm 16 cpu 32 gb 320 ssd
+  # default = "cax11"
+}
 
-# Set the variable value in *.tfvars file
-# or using the -var="hcloud_token=..." CLI option
 variable "hcloud_token" {
   sensitive = true
 }
@@ -66,7 +69,7 @@ resource "hcloud_ssh_key" "main" {
 resource "hcloud_server" "server_test" {
   name        = "test-server"
   image       = "ubuntu-24.04"
-  server_type = "cax11"
+  server_type = var.server_type
   location    = "nbg1"
   firewall_ids = [hcloud_firewall.myfirewall.id]
   ssh_keys    = [hcloud_ssh_key.main.id]
@@ -104,6 +107,7 @@ resource "null_resource" "configure" {
       cd ../ansible
       ansible-playbook -i "$IP," \
         -u root --private-key ~/.ssh/hc_deploy \
+        --extra-vars "$(grep -v '^#' ../../app/.env | grep '=' | sed 's/=\(.*\)/="\1"/' | tr '\n' ' ')" \
         site.yml
     EOT
   }
