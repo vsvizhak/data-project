@@ -155,7 +155,7 @@ services:
     image: trinodb/trino:476
     container_name: trino
     ports:
-      - "8080:8080"
+      - "8090:8080"
     volumes:
       - ./trino/etc:/etc/trino
     environment:
