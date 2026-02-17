@@ -78,18 +78,22 @@ jobs:
              sudo install -o root -g root -m 0644 /tmp/docker-compose.yml /opt/app/docker-compose.yml;
              sudo rm -f /tmp/docker-compose.yml;
 
-             echo 'TAG=${{ env.TAG }}' | sudo tee /opt/app/.env >/dev/null;
+             # Update TAG without nuking other env vars
+             sudo touch /opt/app/.env;
+             sudo sed -i '/^TAG=/d' /opt/app/.env;
+             echo 'TAG=${{ env.TAG }}' | sudo tee -a /opt/app/.env >/dev/null;
 
              cd /opt/app;
 
-             # optional: free 8080 if something else holds it
-             cid=\$(sudo docker ps -q --filter 'publish=8080') || true;
-             if [ -n \"\$cid\" ]; then
-               sudo docker stop \$cid || true;
-               sudo docker rm -f \$cid || true;
-             fi;
-
+             # Stop this compose project cleanly first
              sudo docker compose -p app down --remove-orphans || true;
+
+             # If *anything* is still publishing 8080, kill it (even from other projects)
+             sudo docker ps -q --filter 'publish=8080' | xargs -r sudo docker rm -f || true;
+
+             # Sanity check: show what's listening (optional, but useful in logs)
+             sudo ss -lntp | grep ':8080' || true;
+
              sudo docker compose -p app pull;
              sudo docker compose -p app up -d --remove-orphans --force-recreate;
 
