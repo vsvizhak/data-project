@@ -67,22 +67,20 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Upload to a writable location first
           scp -i ~/.ssh/id_ed25519 app/docker-compose.yml \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/docker-compose.yml
 
-          # Apply on server with sudo, then restart
           ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} <<'EOF'
             set -euo pipefail
 
             sudo mkdir -p /opt/app
-            sudo chown -R ${USER}:${USER} /opt/app || true
+            sudo install -o root -g root -m 0644 /tmp/docker-compose.yml /opt/app/docker-compose.yml
+            sudo rm -f /tmp/docker-compose.yml
 
-            sudo mv /tmp/docker-compose.yml /opt/app/docker-compose.yml
+            # write .env with the tag injected by GitHub Actions (see below)
             cd /opt/app
+          EOF
 
-            echo "TAG=${TAG}" > .env
-
-            docker compose pull
-            docker compose up -d --remove-orphans
+          ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            "set -euo pipefail; cd /opt/app; echo 'TAG=${{ env.TAG }}' | sudo tee /opt/app/.env >/dev/null; sudo docker compose pull; sudo docker compose up -d --remove-orphans"
           EOF
