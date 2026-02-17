@@ -29,16 +29,13 @@ services:
       - "8000:8000"
 
   dbt:
-    build:
-      context: .
-      dockerfile: dbt/Dockerfile
-    container_name: dbt
+    image: vasvasl/dbt-trino:main
     volumes:
       - ./dbt:/app
-    depends_on:
-      - trino
     environment:
       DBT_PROFILES_DIR: /app
+    networks:
+      - iceberg_net
 
   postgres-source:
     image: postgres:16
@@ -52,7 +49,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "airflow" ]
+      test: [ "CMD", "pg_isready", "-U", "app" ]
       interval: 10s
       retries: 5
       start_period: 5s
@@ -121,8 +118,10 @@ services:
       POSTGRES_USER: iceberg
       POSTGRES_PASSWORD: iceberg
       POSTGRES_DB: iceberg_catalog
+    networks:
+      iceberg_net:
     ports:
-      - "5433:5433"
+      - "5433:5432"
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U iceberg -d iceberg_catalog" ]
       interval: 10s
@@ -154,6 +153,8 @@ services:
   trino:
     image: trinodb/trino:476
     container_name: trino
+    networks:
+      iceberg_net:
     ports:
       - "8090:8080"
     volumes:
@@ -174,8 +175,10 @@ services:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
+    networks:
+      - iceberg_net
     ports:
-      - "5434:5434"
+      - "5434:5432"
     volumes:
       - pg_airflow:/var/lib/postgresql/data
     healthcheck:
@@ -188,6 +191,8 @@ services:
   airflow-webserver:
     <<: *airflow-common
     command: webserver
+    networks:
+      - iceberg_net
     ports:
       - "8080:8080"
     healthcheck:
@@ -205,6 +210,8 @@ services:
   airflow-scheduler:
     <<: *airflow-common
     command: scheduler
+    networks:
+      - iceberg_net
     healthcheck:
       test: [ "CMD", "curl", "--fail", "http://localhost:8974/health" ]
       interval: 30s
@@ -220,7 +227,8 @@ services:
   airflow-init:
     <<: *airflow-common
     entrypoint: /bin/bash
-    # yamllint disable rule:line-length
+    networks:
+      - iceberg_net
     command:
       - -c
       - |
