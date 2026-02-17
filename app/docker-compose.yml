@@ -23,10 +23,14 @@ x-airflow-common:
 
 services:
   app:
-    image: vasvasl/data-project-app:main
-    restart: unless-stopped
+    image: vasvasl/data-platform-app:main
+    restart: always
     ports:
       - "8000:8000"
+
+  dbt-trino:
+    image: vasvasl/dbt-trino-app:main
+    restart: always
 
   postgres-source:
     image: postgres:16
@@ -44,12 +48,12 @@ services:
       interval: 10s
       retries: 5
       start_period: 5s
-    restart: unless-stopped
+    restart: always
 
   minio:
     image: minio/minio:latest
     container_name: minio
-    restart: unless-stopped
+    restart: always
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minio

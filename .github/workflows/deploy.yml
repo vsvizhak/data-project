@@ -44,8 +44,19 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/data-project-app:${{ env.TAG }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/data-project-app:main
+            ${{ secrets.DOCKERHUB_USERNAME }}/data-platform-app:${{ env.TAG }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/data-platform-app:main
+
+      - name: Build & push dbt-trino image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app
+          file: ./app/dbt/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/dbt-trino-app:${{ env.TAG }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/dbt-trino-app:main
 
       - name: Prepare SSH
         shell: bash
