@@ -72,11 +72,25 @@ jobs:
 
           ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
             "set -euo pipefail;
+             export COMPOSE_PROJECT_NAME=app;
+
              sudo mkdir -p /opt/app;
              sudo install -o root -g root -m 0644 /tmp/docker-compose.yml /opt/app/docker-compose.yml;
              sudo rm -f /tmp/docker-compose.yml;
+
              echo 'TAG=${{ env.TAG }}' | sudo tee /opt/app/.env >/dev/null;
+
              cd /opt/app;
-             sudo docker compose pull;
-             sudo docker compose up -d --remove-orphans --force-recreate;
+
+             # optional: free 8080 if something else holds it
+             cid=\$(sudo docker ps -q --filter 'publish=8080') || true;
+             if [ -n \"\$cid\" ]; then
+               sudo docker stop \$cid || true;
+               sudo docker rm -f \$cid || true;
+             fi;
+
+             sudo docker compose -p app down --remove-orphans || true;
+             sudo docker compose -p app pull;
+             sudo docker compose -p app up -d --remove-orphans --force-recreate;
+
              sudo docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
