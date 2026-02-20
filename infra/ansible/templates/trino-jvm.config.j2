@@ -1,0 +1,11 @@
+-server
+-Xmx{{ trino_jvm_max_heap | default('2G') }}
+-XX:+UseG1GC
+-XX:G1HeapRegionSize=32M
+-XX:+ExplicitGCInvokesConcurrent
+-XX:+HeapDumpOnOutOfMemoryError
+-XX:+ExitOnOutOfMemoryError
+-XX:-OmitStackTraceInFastThrow
+-XX:ReservedCodeCacheSize=512M
+-Djdk.attach.allowAttachSelf=true
+-Djdk.nio.maxCachedBufferSize=2000000
