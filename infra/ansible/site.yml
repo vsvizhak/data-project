@@ -142,6 +142,19 @@
       async: 600
       poll: 15
 
+    - name: Stop and remove previous stack
+      community.docker.docker_compose_v2:
+        project_src: "{{ project_dir }}"
+        state: absent
+        remove_orphans: true
+        ignore_errors: true
+
+    - name: Start stack
+      community.docker.docker_compose_v2:
+        project_src: "{{ project_dir }}"
+        state: present
+        pull: always
+
     - name: Stop and clean previous stack
       command: docker compose down --remove-orphans
       args:
