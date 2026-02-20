@@ -142,6 +142,7 @@ services:
     volumes:
       - ./warehouse:/home/iceberg/warehouse
       - ./notebooks:/home/iceberg/notebooks/notebooks
+      - ./spark/conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf
     environment:
       - AWS_ACCESS_KEY_ID=minio
       - AWS_SECRET_ACCESS_KEY=minio123
@@ -161,6 +162,7 @@ services:
       - "8090:8080"
     volumes:
       - ./trino/etc:/etc/trino
+      - ./trino/etc/catalog:/etc/trino/catalog
     environment:
       - AWS_ACCESS_KEY_ID=minio
       - AWS_SECRET_ACCESS_KEY=minio123
