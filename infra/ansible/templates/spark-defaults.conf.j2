@@ -1,11 +1,24 @@
-spark.sql.extensions                   org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
-spark.sql.catalog.demo                 org.apache.iceberg.spark.SparkCatalog
-spark.sql.catalog.demo.type            rest
-spark.sql.catalog.demo.uri             http://iceberg-rest:8181
-spark.sql.catalog.demo.io-impl         org.apache.iceberg.aws.s3.S3FileIO
-spark.sql.catalog.demo.warehouse       s3://warehouse/
-spark.sql.catalog.demo.s3.endpoint     http://minio:9000
+# Iceberg extensions
+spark.sql.extensions                        org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
+
+# Iceberg catalog
+spark.sql.catalog.demo                      org.apache.iceberg.spark.SparkCatalog
+spark.sql.catalog.demo.type                 rest
+spark.sql.catalog.demo.uri                  http://iceberg-rest:8181
+spark.sql.catalog.demo.io-impl              org.apache.iceberg.aws.s3.S3FileIO
+spark.sql.catalog.demo.warehouse            s3://warehouse/
+spark.sql.catalog.demo.s3.endpoint          http://minio:9000
 spark.sql.catalog.demo.s3.path-style-access true
-spark.sql.defaultCatalog               demo
-# Важливо для нативного S3 драйвера
-spark.hadoop.aws.region                us-east-1
+spark.sql.defaultCatalog                    demo
+
+# Hadoop S3A (для spark.read.parquet("s3a://..."))
+spark.hadoop.fs.s3a.impl                    org.apache.hadoop.fs.s3a.S3AFileSystem
+spark.hadoop.fs.s3a.endpoint                http://minio:9000
+spark.hadoop.fs.s3a.access.key             minio
+spark.hadoop.fs.s3a.secret.key             minio123
+spark.hadoop.fs.s3a.path.style.access      true
+spark.hadoop.fs.s3a.connection.ssl.enabled false
+spark.hadoop.fs.s3a.aws.credentials.provider org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider
+
+# JARs for S3A (Maven)
+spark.jars.packages                         org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.367
