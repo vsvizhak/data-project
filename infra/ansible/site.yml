@@ -86,7 +86,7 @@
 
         - name: Add Docker repository
           apt_repository:
-            repo: "deb [arch={{ 'arm64' if ansible_architecture in ['aarch64', 'arm64'] else 'amd64' }}] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+            repo: "deb [arch={{ 'arm64' if ansible_facts['architecture'] in ['aarch64', 'arm64'] else 'amd64' }}] https://download.docker.com/linux/ubuntu {{ ansible_facts['distribution_release'] }} stable"
             state: present
 
         - name: Install Docker packages
@@ -141,19 +141,6 @@
         chdir: "{{ project_dir }}"
       async: 600
       poll: 15
-
-    - name: Stop and remove previous stack
-      community.docker.docker_compose_v2:
-        project_src: "{{ project_dir }}"
-        state: absent
-        remove_orphans: true
-        ignore_errors: true
-
-    - name: Start stack
-      community.docker.docker_compose_v2:
-        project_src: "{{ project_dir }}"
-        state: present
-        pull: always
 
     - name: Stop and clean previous stack
       command: docker compose down --remove-orphans
