@@ -6,6 +6,6 @@ app = FastAPI()
 @app.get("/")
 def read_root():
     return {
-        "message": "airflow",
+        "message": "spark",
         "hostname": os.uname().nodename
     }
