@@ -164,25 +164,25 @@
 
     - name: Ensure spark configuration directory exists
       file:
-        path: "{{ project_root }}/spark/conf"
+        path: "{{ project_dir }}/spark/conf"
         state: directory
         mode: '0755'
 
     - name: Deploy spark-defaults.conf from template
       template:
         src: spark-defaults.conf.j2
-        dest: "{{ project_root }}/spark/conf/spark-defaults.conf"
+        dest: "{{ project_dir }}/spark/conf/spark-defaults.conf"
         mode: '0644'
 
     - name: Ensure trino catalog directory exists
       file:
-        path: "{{ project_root }}/trino/etc/catalog"
+        path: "{{ project_dir }}/trino/etc/catalog"
         state: directory
         mode: '0755'
 
     - name: Deploy Trino Iceberg connector config
       copy:
-        dest: "{{ project_root }}/trino/etc/catalog/iceberg.properties"
+        dest: "{{ project_dir }}/trino/etc/catalog/iceberg.properties"
         content: |
           connector.name=iceberg
           iceberg.catalog.type=rest
