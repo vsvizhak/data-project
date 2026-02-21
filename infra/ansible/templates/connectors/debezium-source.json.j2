@@ -1,0 +1,18 @@
+{
+  "name": "{{ debezium_connector_name }}",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "pg_source",
+    "database.port": "5432",
+    "database.user": "{{ vault_pg_user }}",
+    "database.password": "{{ vault_pg_password }}",
+    "database.dbname": "{{ vault_pg_dbname }}",
+    "database.server.name": "pg_source",
+    "topic.prefix": "cdc",
+    "plugin.name": "pgoutput",
+    "table.include.list": "{{ debezium_table_include_list }}",
+    "slot.name": "{{ debezium_slot_name }}",
+    "heartbeat.interval.ms": "10000",
+    "snapshot.mode": "initial"
+  }
+}

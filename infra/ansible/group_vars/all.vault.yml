@@ -1,0 +1,6 @@
+vault_pg_user: "app"
+vault_pg_password: "app"
+vault_pg_dbname: "appdb"
+vault_minio_access_key: "minio"
+vault_minio_secret_key: "minio123"
+

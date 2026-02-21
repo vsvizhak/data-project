@@ -1,0 +1,21 @@
+{
+  "name": "{{ s3_connector_name }}",
+  "config": {
+    "connector.class": "io.confluent.connect.s3.S3SinkConnector",
+    "tasks.max": "1",
+    "topics.regex": "cdc\\.public\\..*",
+    "s3.region": "us-east-1",
+    "s3.bucket.name": "{{ s3_bucket }}",
+    "s3.part.size": "5242880",
+    "store.url": "{{ minio_url }}",
+    "storage.class": "io.confluent.connect.s3.storage.S3Storage",
+    "format.class": "io.confluent.connect.s3.format.parquet.ParquetFormat",
+    "parquet.codec": "snappy",
+    "flush.size": "{{ s3_flush_size }}",
+    "rotate.interval.ms": "{{ s3_rotate_interval_ms }}",
+    "locale": "en_US",
+    "timezone": "UTC",
+    "aws.access.key.id": "{{ vault_minio_access_key }}",
+    "aws.secret.access.key": "{{ vault_minio_secret_key }}"
+  }
+}

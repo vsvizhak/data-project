@@ -10,3 +10,15 @@ fail2ban_bantime: "1h"
 project_dir: /opt/app
 compose_src: ../../app/docker-compose.yml
 env_src: ../../app/.env
+
+kafka_connect_url: "http://{{ inventory_hostname }}:8083"
+
+debezium_connector_name: "postgres-source-connector"
+debezium_table_include_list: "public.*"
+debezium_slot_name: "debezium_slot"
+
+s3_connector_name: "s3-sink-connector"
+s3_bucket: "warehouse"
+s3_flush_size: "1000"
+s3_rotate_interval_ms: "60000"
+minio_url: "http://minio:9000"
