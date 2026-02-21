@@ -325,9 +325,7 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
 
   kafka-connect:
-    build:
-      context: ./kafka-connect
-      dockerfile: Dockerfile
+    image: vasvasl/kafka-connect-custom:main
     container_name: kafka-connect
     networks:
       - iceberg_net
