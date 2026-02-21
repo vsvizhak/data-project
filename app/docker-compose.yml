@@ -85,6 +85,7 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+
   mc:
     depends_on:
       - minio
@@ -119,6 +120,7 @@ services:
       - CATALOG_WAREHOUSE=s3://warehouse/
       - CATALOG_IO__IMPL=org.apache.iceberg.aws.s3.S3FileIO
       - CATALOG_S3_ENDPOINT=http://minio:9000
+
   postgres-iceberg:
     image: postgres:13
     environment:
@@ -323,7 +325,9 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
 
   kafka-connect:
-    image: confluentinc/cp-kafka-connect:7.6.0
+    build:
+      context: ./kafka-connect
+      dockerfile: Dockerfile
     container_name: kafka-connect
     networks:
       - iceberg_net
@@ -347,12 +351,6 @@ services:
       CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components
       AWS_ACCESS_KEY_ID: minio
       AWS_SECRET_ACCESS_KEY: minio123
-    command: >
-      bash -c "
-        confluent-hub install --no-prompt debezium/debezium-connector-postgresql:2.5.4 &&
-        confluent-hub install --no-prompt confluentinc/kafka-connect-s3:10.5.4 &&
-        /etc/confluent/docker/run
-      "
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
