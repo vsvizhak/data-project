@@ -15,7 +15,13 @@ terraform {
 variable "server_type" {
   type = string
   default = "cax41" #arm 16 cpu 32 gb 320 ssd
-  # default = "cax11"
+  # default = "cax11" #arm 2 cpu 4 gb 40 ssd
+}
+
+variable "location" {
+  type = string
+  default = "hel1" # Helsinki
+  # default = "nbg1" # Nuremberg
 }
 
 variable "hcloud_token" {
@@ -70,7 +76,7 @@ resource "hcloud_server" "server_test" {
   name        = "test-server"
   image       = "ubuntu-24.04"
   server_type = var.server_type
-  location    = "nbg1"
+  location    = var.location
   firewall_ids = [hcloud_firewall.myfirewall.id]
   ssh_keys    = [hcloud_ssh_key.main.id]
   labels = {
