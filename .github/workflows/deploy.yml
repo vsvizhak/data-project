@@ -8,6 +8,7 @@ on:
       - ".env.example"
       - "app/**"
       - "Dockerfile"
+      - "app/kafka-connect/**"
       - ".github/workflows/deploy.yml"
 
 concurrency:
