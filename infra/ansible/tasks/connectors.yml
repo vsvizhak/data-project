@@ -1,45 +1,49 @@
-vars:
-  connectors:
-    - name: "{{ debezium_connector_name }}"
-      template: "templates/connectors/debezium-source.json.j2"
-    - name: "{{ s3_connector_name }}"
-      template: "templates/connectors/s3-sink.json.j2"
+# tasks/connectors.yml
+- hosts: all
+  become: true
 
-tasks:
-  - name: "Wait for Kafka Connect to be ready"
-    uri:
-      url: "{{ kafka_connect_url }}/connectors"
-      method: GET
-      status_code: 200
-    register: result
-    until: result.status == 200
-    retries: 30
-    delay: 10
+  vars:
+    connectors:
+      - name: "{{ debezium_connector_name }}"
+        template: "templates/connectors/debezium-source.json.j2"
+      - name: "{{ s3_connector_name }}"
+        template: "templates/connectors/s3-sink.json.j2"
 
-  - name: "Check which connectors already exist"
-    uri:
-      url: "{{ kafka_connect_url }}/connectors/{{ item.name }}"
-      method: GET
-      status_code: [200, 404]
-    loop: "{{ connectors }}"
-    register: connector_status
+  tasks:
+    - name: "Wait for Kafka Connect to be ready"
+      uri:
+        url: "{{ kafka_connect_url }}/connectors"
+        method: GET
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 30
+      delay: 10
 
-  - name: "Register new connectors (POST)"
-    uri:
-      url: "{{ kafka_connect_url }}/connectors"
-      method: POST
-      body_format: json
-      body: "{{ lookup('template', item.item.template) }}"
-      status_code: 201
-    loop: "{{ connector_status.results }}"
-    when: item.status == 404
+    - name: "Check which connectors already exist"
+      uri:
+        url: "{{ kafka_connect_url }}/connectors/{{ item.name }}"
+        method: GET
+        status_code: [200, 404]
+      loop: "{{ connectors }}"
+      register: connector_status
 
-  - name: "Update existing connectors (PUT config)"
-    uri:
-      url: "{{ kafka_connect_url }}/connectors/{{ item.item.name }}/config"
-      method: PUT
-      body_format: json
-      body: "{{ (lookup('template', item.item.template) | from_json).config }}"
-      status_code: 200
-    loop: "{{ connector_status.results }}"
-    when: item.status == 200
+    - name: "Register new connectors (POST)"
+      uri:
+        url: "{{ kafka_connect_url }}/connectors"
+        method: POST
+        body_format: json
+        body: "{{ lookup('template', item.item.template) }}"
+        status_code: 201
+      loop: "{{ connector_status.results }}"
+      when: item.status == 404
+
+    - name: "Update existing connectors (PUT config)"
+      uri:
+        url: "{{ kafka_connect_url }}/connectors/{{ item.item.name }}/config"
+        method: PUT
+        body_format: json
+        body: "{{ (lookup('template', item.item.template) | from_json).config }}"
+        status_code: 200
+      loop: "{{ connector_status.results }}"
+      when: item.status == 200
