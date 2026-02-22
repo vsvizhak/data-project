@@ -20,11 +20,3 @@
     - import_tasks: tasks/handlers.yml
 
 - import_playbook: tasks/connectors.yml
-
-
-
-
-  handlers:
-
-
-- import_playbook: ./tasks/connectors.yml
