@@ -162,18 +162,10 @@ resource "null_resource" "configure" {
 
       cd ../ansible
 
-      # Deploy stack
       ansible-playbook -i "$IP," \
         -u root --private-key ~/.ssh/hc_deploy \
         --extra-vars "$EXTRA_VARS" \
         site.yml
-
-      # Register Kafka Connect connectors
-      # (wait_for всередині playbook сам дочекається готовності Kafka Connect)
-      ansible-playbook -i "$IP," \
-        -u root --private-key ~/.ssh/hc_deploy \
-        --extra-vars "$EXTRA_VARS" \
-        connectors.yml
     EOT
   }
 }

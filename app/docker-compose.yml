@@ -64,6 +64,43 @@ services:
       start_period: 5s
     restart: always
 
+  flyway:
+    image: flyway/flyway:10
+    container_name: flyway
+    networks:
+      - iceberg_net
+    depends_on:
+      postgres-source:
+        condition: service_healthy
+    volumes:
+      - ./source_db/migration:/flyway/sql/migration
+      - ./source_db/proc:/flyway/sql/proc
+      - ./source_db/conf/flyway.conf:/flyway/conf/flyway.conf
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres-source:5432/${vault_pg_dbname}
+      FLYWAY_USER: ${vault_pg_user}
+      FLYWAY_PASSWORD: ${vault_pg_password}
+    command: migrate
+    restart: "no"
+
+  src-faker:
+    build: ./source_db/faker
+    container_name: src-faker
+    networks:
+      - iceberg_net
+    depends_on:
+      flyway:
+        condition: service_completed_successfully
+    environment:
+      DB_HOST: postgres-source
+      DB_PORT: "5432"
+      DB_NAME: ${vault_pg_dbname}
+      DB_USER: ${vault_pg_user}
+      DB_PASSWORD: ${vault_pg_password}
+      FAKER_BATCH_SIZE: "10"
+      FAKER_INTERVAL_SEC: "30"
+    restart: "no"
+
   minio:
     image: minio/minio:latest
     container_name: minio
