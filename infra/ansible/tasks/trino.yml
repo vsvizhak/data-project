@@ -1,0 +1,29 @@
+- name: "Ensure trino/etc/catalog directory exists"
+  file:
+    path: "{{ project_dir }}/trino/etc/catalog"
+    state: directory
+    mode: '0755'
+
+- name: "Deploy jvm.config from template"
+  template:
+    src: trino-jvm.config.j2
+    dest: "{{ project_dir }}/trino/etc/jvm.config"
+    mode: '0644'
+
+- name: "Deploy config.properties from template"
+  template:
+    src: trino-config.properties.j2
+    dest: "{{ project_dir }}/trino/etc/config.properties"
+    mode: '0644'
+
+- name: "Deploy node.properties from template"
+  template:
+    src: trino-node.properties.j2
+    dest: "{{ project_dir }}/trino/etc/node.properties"
+    mode: '0644'
+
+- name: "Deploy iceberg.properties from template"
+  template:
+    src: trino-iceberg.properties.j2
+    dest: "{{ project_dir }}/trino/etc/catalog/iceberg.properties"
+    mode: '0644'

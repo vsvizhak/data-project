@@ -6,8 +6,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY seed.py .
-COPY faker_producer.py .
-COPY entrypoint.sh .
-RUN chmod +x entrypoint.sh
+COPY faker.py .
 
-CMD ["./entrypoint.sh"]
+CMD ["sh", "-c", "python seed.py && python faker.py"]

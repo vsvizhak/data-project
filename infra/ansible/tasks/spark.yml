@@ -1,0 +1,11 @@
+- name: "Ensure spark/conf directory exists"
+  file:
+    path: "{{ project_dir }}/spark/conf"
+    state: directory
+    mode: '0755'
+
+- name: "Deploy spark-defaults.conf from template"
+  template:
+    src: spark-defaults.conf.j2
+    dest: "{{ project_dir }}/spark/conf/spark-defaults.conf"
+    mode: '0644'

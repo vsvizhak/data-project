@@ -1,0 +1,21 @@
+- name: "Pull images"
+  command: docker compose pull
+  args:
+    chdir: "{{ project_dir }}"
+  async: 600
+  poll: 15
+
+- name: "Stop and clean previous stack"
+  command: docker compose down --remove-orphans
+  args:
+    chdir: "{{ project_dir }}"
+  become: true
+  become_user: "{{ new_user }}"
+  ignore_errors: true
+
+- name: "Start stack"
+  command: docker compose up -d
+  args:
+    chdir: "{{ project_dir }}"
+  become: true
+  become_user: "{{ new_user }}"

@@ -2,235 +2,29 @@
   become: true
 
   tasks:
-    - name: "[01/23] Update apt cache and upgrade"
-      apt:
-        update_cache: true
-        upgrade: dist
+    # --- system ---
+    - import_tasks: tasks/system.yml      # apt, user, sudo, ssh, ufw, fail2ban
+    - import_tasks: tasks/docker.yml      # docker install + user group
 
-    - name: "[02/23] Install base packages"
-      apt:
-        name:
-          - ca-certificates
-          - curl
-          - gnupg
-          - ufw
-          - fail2ban
-        state: present
+    # --- app files ---
+    - import_tasks: tasks/project.yml     # create dirs, upload compose + .env
+    - import_tasks: tasks/source_db.yml   # upload migrations + faker
+    - import_tasks: tasks/spark.yml       # spark config
+    - import_tasks: tasks/trino.yml       # trino config
+    - import_tasks: tasks/airflow.yml     # airflow dirs
 
-    - name: "[03/23] Create user"
-      user:
-        name: "{{ new_user }}"
-        groups: sudo
-        append: true
-        shell: /bin/bash
-        create_home: true
-
-    - name: "[04/23] Allow passwordless sudo for deploy"
-      copy:
-        dest: "/etc/sudoers.d/{{ new_user }}"
-        content: "{{ new_user }} ALL=(ALL) NOPASSWD:ALL\n"
-        owner: root
-        group: root
-        mode: "0440"
-
-    - name: "[05/23] Validate sudoers"
-      command: visudo -cf /etc/sudoers
-
-    - name: "[06/23] Authorize SSH key for user"
-      authorized_key:
-        user: "{{ new_user }}"
-        state: present
-        key: "{{ lookup('file', ssh_pubkey_path) }}"
-
-    - name: "[07/23] Wait for SSH to be available"
-      wait_for:
-        port: "{{ ssh_port }}"
-        host: "{{ inventory_hostname }}"
-        timeout: 120
-      delegate_to: localhost
-      become: false
-
-    - name: "[08/23] Harden sshd_config"
-      template:
-        src: templates/sshd_config.j2
-        dest: /etc/ssh/sshd_config
-        mode: "0644"
-      notify:
-        - Validate sshd config
-        - Restart ssh
-
-    - name: "[09/23] Configure fail2ban for sshd"
-      template:
-        src: templates/jail.local.j2
-        dest: /etc/fail2ban/jail.local
-        mode: "0644"
-      notify: Restart fail2ban
-
-    - name: "[10/23] Allow SSH"
-      ufw:
-        rule: allow
-        port: "{{ ssh_port }}"
-        proto: tcp
-
-    - name: "[11/23] Enable UFW (deny by default)"
-      ufw:
-        state: enabled
-        policy: deny
-
-    - name: "[12/23] Install Docker (official repo)"
-      block:
-        - name: Add Docker GPG key
-          apt_key:
-            url: https://download.docker.com/linux/ubuntu/gpg
-            state: present
-
-        - name: Add Docker repository
-          apt_repository:
-            repo: "deb [arch={{ 'arm64' if ansible_facts['architecture'] in ['aarch64', 'arm64'] else 'amd64' }}] https://download.docker.com/linux/ubuntu {{ ansible_facts['distribution_release'] }} stable"
-            state: present
-
-        - name: Install Docker packages
-          apt:
-            update_cache: true
-            name:
-              - docker-ce
-              - docker-ce-cli
-              - containerd.io
-              - docker-buildx-plugin
-              - docker-compose-plugin
-            state: present
-
-    - name: "[13/23] Add user to docker group"
-      user:
-        name: "{{ new_user }}"
-        groups: docker
-        append: true
-
-    - name: "[14/23] Create project directory"
-      file:
-        path: "{{ project_dir }}"
-        state: directory
-        owner: "{{ new_user }}"
-        group: "{{ new_user }}"
-        mode: "0755"
-
-    - name: "[15/23] Ensure project directory ownership"
-      file:
-        path: "{{ project_dir }}"
-        owner: "{{ new_user }}"
-        group: "{{ new_user }}"
-        recurse: true
-
-    - name: "[16/23] Upload docker-compose.yml"
-      copy:
-        src: "{{ compose_src }}"
-        dest: "{{ project_dir }}/docker-compose.yml"
-        mode: "0644"
-
-    - name: "[17/23] Upload .env"
-      copy:
-        src: "{{ env_src }}"
-        dest: "{{ project_dir }}/.env"
-        owner: "{{ new_user }}"
-        group: "{{ new_user }}"
-        mode: "0644"
-
-    - name: "[18/23] Pull images"
-      command: docker compose pull
-      args:
-        chdir: "{{ project_dir }}"
-      async: 600
-      poll: 15
-
-    - name: "[19/23] Stop and clean previous stack"
-      command: docker compose down --remove-orphans
-      args:
-        chdir: "{{ project_dir }}"
-      become: true
-      become_user: "{{ new_user }}"
-      ignore_errors: true
-
-    - name: "[20/23] Create Airflow directories (dags, logs, plugins)"
-      file:
-        path: "{{ project_dir }}/{{ item }}"
-        state: directory
-        owner: "50000"
-        group: "0"
-        mode: "0775"
-      loop:
-        - dags
-        - logs
-        - plugins
-
-    - name: "[21/23] Deploy Spark configuration"
-      block:
-        - name: Ensure spark/conf directory exists
-          file:
-            path: "{{ project_dir }}/spark/conf"
-            state: directory
-            mode: '0755'
-
-        - name: Deploy spark-defaults.conf from template
-          template:
-            src: spark-defaults.conf.j2
-            dest: "{{ project_dir }}/spark/conf/spark-defaults.conf"
-            mode: '0644'
-
-    - name: "[22/23] Deploy Trino configuration"
-      block:
-        - name: Ensure trino/etc/catalog directory exists
-          file:
-            path: "{{ project_dir }}/trino/etc/catalog"
-            state: directory
-            mode: '0755'
-
-        - name: Deploy jvm.config from template
-          template:
-            src: trino-jvm.config.j2
-            dest: "{{ project_dir }}/trino/etc/jvm.config"
-            mode: '0644'
-
-        - name: Deploy config.properties from template
-          template:
-            src: trino-config.properties.j2
-            dest: "{{ project_dir }}/trino/etc/config.properties"
-            mode: '0644'
-
-        - name: Deploy node.properties from template
-          template:
-            src: trino-node.properties.j2
-            dest: "{{ project_dir }}/trino/etc/node.properties"
-            mode: '0644'
-
-        - name: Deploy iceberg.properties from template
-          template:
-            src: trino-iceberg.properties.j2
-            dest: "{{ project_dir }}/trino/etc/catalog/iceberg.properties"
-            mode: '0644'
-
-    - name: "[23/23] Start stack"
-      command: docker compose up -d
-      args:
-        chdir: "{{ project_dir }}"
-      become: true
-      become_user: "{{ new_user }}"
+    # --- deploy ---
+    - import_tasks: tasks/stack.yml       # pull images, down, up
 
   handlers:
-    - name: Validate sudoers
-      command: visudo -cf /etc/sudoers.d/{{ new_user }}
+    - import_tasks: tasks/handlers.yml
 
-    - name: Validate sshd config
-      command: sshd -t
+- import_playbook: tasks/connectors.yml
 
-    - name: Restart ssh
-      service:
-        name: ssh
-        state: restarted
 
-    - name: Restart fail2ban
-      service:
-        name: fail2ban
-        state: restarted
 
-- import_playbook: source_db.yml
-- import_playbook: connectors.yml
+
+  handlers:
+
+
+- import_playbook: ./tasks/connectors.yml

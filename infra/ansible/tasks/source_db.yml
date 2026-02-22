@@ -1,0 +1,58 @@
+- name: "Ensure source_db directories exist"
+  file:
+    path: "{{ project_dir }}/source_db/{{ item }}"
+    state: directory
+    owner: "{{ new_user }}"
+    group: "{{ new_user }}"
+    mode: "0755"
+  loop:
+    - migration
+    - proc
+    - conf
+    - seeder
+
+- name: "Upload migration SQL files"
+  copy:
+    src: "{{ item }}"
+    dest: "{{ project_dir }}/source_db/migration/"
+    owner: "{{ new_user }}"
+    group: "{{ new_user }}"
+    mode: "0644"
+  with_fileglob:
+    - "{{ playbook_dir }}/../app/source_db/migration/*.sql"
+
+- name: "Upload proc SQL files"
+  copy:
+    src: "{{ item }}"
+    dest: "{{ project_dir }}/source_db/proc/"
+    owner: "{{ new_user }}"
+    group: "{{ new_user }}"
+    mode: "0644"
+  with_fileglob:
+    - "{{ playbook_dir }}/../app/source_db/proc/*.sql"
+
+- name: "Upload flyway.conf"
+  copy:
+    src: "{{ playbook_dir }}/../app/source_db/conf/flyway.conf"
+    dest: "{{ project_dir }}/source_db/conf/flyway.conf"
+    owner: "{{ new_user }}"
+    group: "{{ new_user }}"
+    mode: "0644"
+
+- name: "Upload faker files"
+  copy:
+    src: "{{ item }}"
+    dest: "{{ project_dir }}/source_db/faker/"
+    owner: "{{ new_user }}"
+    group: "{{ new_user }}"
+    mode: "0644"
+  with_fileglob:
+    - "{{ playbook_dir }}/../app/source_db/faker/*"
+
+- name: "Make seed.py and faker.py executable"
+  file:
+    path: "{{ project_dir }}/source_db/faker/{{ item }}"
+    mode: "0755"
+  loop:
+    - seed.py
+    - faker.py

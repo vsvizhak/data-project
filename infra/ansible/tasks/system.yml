@@ -1,0 +1,75 @@
+# tasks/system.yml
+- name: "Update apt cache and upgrade"
+  apt:
+    update_cache: true
+    upgrade: dist
+
+- name: "Install base packages"
+  apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - ufw
+      - fail2ban
+    state: present
+
+- name: "Create user"
+  user:
+    name: "{{ new_user }}"
+    groups: sudo
+    append: true
+    shell: /bin/bash
+    create_home: true
+
+- name: "Allow passwordless sudo for deploy"
+  copy:
+    dest: "/etc/sudoers.d/{{ new_user }}"
+    content: "{{ new_user }} ALL=(ALL) NOPASSWD:ALL\n"
+    owner: root
+    group: root
+    mode: "0440"
+
+- name: "Validate sudoers"
+  command: visudo -cf /etc/sudoers
+
+- name: "Authorize SSH key for user"
+  authorized_key:
+    user: "{{ new_user }}"
+    state: present
+    key: "{{ lookup('file', ssh_pubkey_path) }}"
+
+- name: "Wait for SSH to be available"
+  wait_for:
+    port: "{{ ssh_port }}"
+    host: "{{ inventory_hostname }}"
+    timeout: 120
+  delegate_to: localhost
+  become: false
+
+- name: "Harden sshd_config"
+  template:
+    src: templates/sshd_config.j2
+    dest: /etc/ssh/sshd_config
+    mode: "0644"
+  notify:
+    - Validate sshd config
+    - Restart ssh
+
+- name: "Configure fail2ban for sshd"
+  template:
+    src: templates/jail.local.j2
+    dest: /etc/fail2ban/jail.local
+    mode: "0644"
+  notify: Restart fail2ban
+
+- name: "Allow SSH"
+  ufw:
+    rule: allow
+    port: "{{ ssh_port }}"
+    proto: tcp
+
+- name: "Enable UFW (deny by default)"
+  ufw:
+    state: enabled
+    policy: deny
