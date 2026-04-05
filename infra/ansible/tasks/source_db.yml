@@ -9,7 +9,7 @@
     - migration
     - proc
     - conf
-    - seeder
+    - faker
 
 - name: "Upload migration SQL files"
   copy:
@@ -19,7 +19,7 @@
     group: "{{ new_user }}"
     mode: "0644"
   with_fileglob:
-    - "{{ playbook_dir }}/../app/source_db/migration/*.sql"
+    - "{{ app_src }}/source_db/migration/*.sql"
 
 - name: "Upload proc SQL files"
   copy:
@@ -29,11 +29,11 @@
     group: "{{ new_user }}"
     mode: "0644"
   with_fileglob:
-    - "{{ playbook_dir }}/../app/source_db/proc/*.sql"
+    - "{{ app_src }}/source_db/proc/*.sql"
 
 - name: "Upload flyway.conf"
   copy:
-    src: "{{ playbook_dir }}/../app/source_db/conf/flyway.conf"
+    src: "{{ app_src }}/source_db/conf/flyway.conf"
     dest: "{{ project_dir }}/source_db/conf/flyway.conf"
     owner: "{{ new_user }}"
     group: "{{ new_user }}"
@@ -47,7 +47,7 @@
     group: "{{ new_user }}"
     mode: "0644"
   with_fileglob:
-    - "{{ playbook_dir }}/../app/source_db/faker/*"
+    - "{{ app_src }}/source_db/faker/*"
 
 - name: "Make seed.py and faker.py executable"
   file:

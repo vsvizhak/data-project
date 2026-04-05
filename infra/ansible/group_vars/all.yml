@@ -10,6 +10,7 @@ fail2ban_bantime: "1h"
 project_dir: /opt/app
 compose_src: ../../app/docker-compose.yml
 env_src: ../../app/.env
+app_src: ../../app
 
 kafka_connect_url: "http://{{ inventory_hostname }}:8083"
 

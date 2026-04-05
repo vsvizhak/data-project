@@ -24,7 +24,7 @@ terraform {
 
 variable "server_type" {
   type    = string
-  default = "cax41" #arm 16 cpu 32 gb 320 ssd
+  default = "cx53" #arm 16 cpu 32 gb 320 ssd
   # default = "cax11" #arm 2 cpu 4 gb 40 ssd
 }
 
