@@ -4,11 +4,11 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - "app/docker-compose.yml"
+      - "docker-compose.yml"
       - ".env.example"
-      - "app/**"
-      - "Dockerfile"
-      - "app/kafka-connect/**"
+      - "api/**"
+      - "services/**"
+      - "pipelines/**"
       - ".github/workflows/deploy.yml"
 
 concurrency:
@@ -40,8 +40,8 @@ jobs:
       - name: Build & push app image
         uses: docker/build-push-action@v6
         with:
-          context: ./app
-          file: ./app/Dockerfile
+          context: ./api
+          file: ./api/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
@@ -51,8 +51,8 @@ jobs:
       - name: Build & push dbt-trino image
         uses: docker/build-push-action@v6
         with:
-          context: ./app/dbt
-          file: ./app/dbt/Dockerfile
+          context: ./services/dbt
+          file: ./services/dbt/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
@@ -62,8 +62,8 @@ jobs:
       - name: Build & push kafka-connect image
         uses: docker/build-push-action@v6
         with:
-          context: ./app/kafka-connect
-          file: ./app/kafka-connect/Dockerfile
+          context: ./services/kafka-connect
+          file: ./services/kafka-connect/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
@@ -77,7 +77,7 @@ jobs:
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
-          
+
           cat > ~/.ssh/id_ed25519 <<'KEY'
           ${{ secrets.SSH_PRIVATE_KEY }}
           KEY
@@ -90,7 +90,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          scp -i ~/.ssh/id_ed25519 app/docker-compose.yml \
+          scp -i ~/.ssh/id_ed25519 docker-compose.yml \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/docker-compose.yml
 
           ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \

@@ -1,11 +1,18 @@
-- name: "Create Airflow directories (dags, logs, plugins)"
+- name: "Create Airflow dags directory"
   file:
-    path: "{{ project_dir }}/{{ item }}"
+    path: "{{ project_dir }}/pipelines/airflow/dags"
+    state: directory
+    owner: "50000"
+    group: "0"
+    mode: "0775"
+
+- name: "Create Airflow runtime directories (logs, plugins)"
+  file:
+    path: "{{ project_dir }}/pipelines/airflow/{{ item }}"
     state: directory
     owner: "50000"
     group: "0"
     mode: "0775"
   loop:
-    - dags
     - logs
     - plugins

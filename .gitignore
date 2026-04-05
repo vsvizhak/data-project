@@ -1,2 +1,2 @@
 *.tfvars
-app/.env
+.env

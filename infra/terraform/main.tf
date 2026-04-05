@@ -24,8 +24,8 @@ terraform {
 
 variable "server_type" {
   type    = string
-  default = "cx53" #arm 16 cpu 32 gb 320 ssd
-  # default = "cax11" #arm 2 cpu 4 gb 40 ssd
+  default = "cx53" # intel x86 16 cpu 32 gb 320 ssd
+  # default = "cax11" # arm 2 cpu 4 gb 40 ssd
 }
 
 variable "location" {
@@ -158,7 +158,7 @@ resource "null_resource" "configure" {
       # add current host key (non-interactive)
       ssh-keyscan -H "$IP" >> ~/.ssh/known_hosts 2>/dev/null || true
 
-      EXTRA_VARS="$(grep -v '^#' ../../app/.env | grep '=' | sed 's/=\(.*\)/="\1"/' | tr '\n' ' ')"
+      EXTRA_VARS="$(grep -v '^#' ../../.env | grep '=' | sed 's/=\(.*\)/="\1"/' | tr '\n' ' ')"
 
       cd ../ansible
 

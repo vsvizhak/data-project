@@ -11,10 +11,9 @@ x-airflow-common:
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
   volumes:
-    - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
-    - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
-    - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
-    - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
+    - ./pipelines/airflow/dags:/opt/airflow/dags
+    - ./pipelines/airflow/logs:/opt/airflow/logs
+    - ./pipelines/airflow/plugins:/opt/airflow/plugins
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     &airflow-common-depends-on
@@ -33,7 +32,7 @@ services:
   dbt:
     image: vasvasl/dbt-trino-app:main
     volumes:
-      - ./dbt:/app
+      - ./pipelines/dbt:/app
     environment:
       DBT_PROFILES_DIR: /app
     networks:
@@ -73,9 +72,9 @@ services:
       postgres-source:
         condition: service_healthy
     volumes:
-      - ./source_db/migration:/flyway/sql/migration
-      - ./source_db/proc:/flyway/sql/proc
-      - ./source_db/conf/flyway.conf:/flyway/conf/flyway.conf
+      - ./services/source_db/migration:/flyway/sql/migration
+      - ./services/source_db/proc:/flyway/sql/proc
+      - ./services/source_db/conf/flyway.conf:/flyway/conf/flyway.conf
     environment:
       FLYWAY_URL: jdbc:postgresql://postgres-source:5432/${vault_pg_dbname}
       FLYWAY_USER: ${vault_pg_user}
@@ -84,7 +83,7 @@ services:
     restart: "no"
 
   src-faker:
-    build: ./source_db/faker
+    build: ./services/source_db/faker
     container_name: src-faker
     networks:
       - iceberg_net
@@ -186,8 +185,8 @@ services:
       - minio
     volumes:
       - ./warehouse:/home/iceberg/warehouse
-      - ./notebooks:/home/iceberg/notebooks/notebooks
-      - ./spark/conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf
+      - ./pipelines/spark/notebooks:/home/iceberg/notebooks/notebooks
+      - ./services/spark/conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf
     environment:
       - AWS_ACCESS_KEY_ID=${vault_minio_access_key}
       - AWS_SECRET_ACCESS_KEY=${vault_minio_secret_key}
@@ -206,8 +205,8 @@ services:
     ports:
       - "8090:8080"
     volumes:
-      - ./trino/etc:/etc/trino
-      - ./trino/etc/catalog:/etc/trino/catalog
+      - ./services/trino/etc:/etc/trino
+      - ./services/trino/etc/catalog:/etc/trino/catalog
     environment:
       - AWS_ACCESS_KEY_ID=${vault_minio_access_key}
       - AWS_SECRET_ACCESS_KEY=${vault_minio_secret_key}
@@ -313,7 +312,7 @@ services:
       _PIP_ADDITIONAL_REQUIREMENTS: ''
     user: "0:0"
     volumes:
-      - ${AIRFLOW_PROJ_DIR:-.}:/sources
+      - .:/sources
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
