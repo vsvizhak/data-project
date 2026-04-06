@@ -1,4 +1,4 @@
-# tasks/connectors.yml
+# connectors.yml
 - hosts: all
   become: true
 
