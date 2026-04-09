@@ -175,10 +175,6 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: {{ .Values.nodes.airflow }}
-      initContainers:
-        - name: wait-for-postgres
-          image: postgres:13
-          command: ['sh', '-c', 'until pg_isready -h airflow-postgres -p 5432; do echo "waiting..."; sleep 3; done']
       containers:
         - name: webserver
           image: {{ .Values.images.airflow }}
@@ -257,10 +253,6 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: {{ .Values.nodes.airflow }}
-      initContainers:
-        - name: wait-for-postgres
-          image: postgres:13
-          command: ['sh', '-c', 'until pg_isready -h airflow-postgres -p 5432; do echo "waiting..."; sleep 3; done']
       containers:
         - name: scheduler
           image: {{ .Values.images.airflow }}

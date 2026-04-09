@@ -56,6 +56,17 @@ spec:
         app: kafka
     spec:
       enableServiceLinks: false
+      dnsPolicy: None
+      dnsConfig:
+        nameservers:
+          - 10.96.0.10
+        searches:
+          - data-platform.svc.cluster.local
+          - svc.cluster.local
+          - cluster.local
+        options:
+          - name: ndots
+            value: "5"
       nodeSelector:
         kubernetes.io/hostname: {{ .Values.nodes.kafka }}
       containers:
