@@ -1,0 +1,44 @@
+nodes:
+  kafka: kafka
+  spark: spark
+  trino: trino
+  airflow: airflow
+
+images:
+  zookeeper: confluentinc/cp-zookeeper:7.6.0
+  kafka: confluentinc/cp-kafka:7.6.0
+  kafkaConnect: vasvasl/kafka-connect-custom:main
+  kafkaUi: provectuslabs/kafka-ui:latest
+  minio: minio/minio:latest
+  mc: minio/mc
+  postgresSource: postgres:16
+  postgresIceberg: postgres:13
+  icebergRest: apache/iceberg-rest-fixture
+  spark: tabulario/spark-iceberg
+  trino: trinodb/trino:476
+  airflow: apache/airflow:2.11.0
+  airflowPostgres: postgres:13
+  app: vasvasl/data-platform-app:main
+  dbt: vasvasl/dbt-trino-app:main
+  flyway: flyway/flyway:10
+  faker: vasvasl/src-faker:main
+
+secrets:
+  pg:
+    user: ""
+    password: ""
+    dbname: ""
+  minio:
+    accessKey: ""
+    secretKey: ""
+  airflow:
+    postgresUser: airflow
+    postgresPassword: ""
+    postgresDb: airflow
+    fernetKey: ""
+    wwwUser: airflow
+    wwwPassword: airflow
+  icebergPostgres:
+    user: iceberg
+    password: iceberg
+    db: iceberg_catalog

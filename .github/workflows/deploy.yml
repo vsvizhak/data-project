@@ -4,11 +4,9 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - "docker-compose.yml"
-      - ".env.example"
       - "api/**"
       - "services/**"
-      - "pipelines/**"
+      - "k8s/**"
       - ".github/workflows/deploy.yml"
 
 concurrency:
@@ -70,54 +68,35 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/kafka-connect-custom:${{ env.TAG }}
             ${{ secrets.DOCKERHUB_USERNAME }}/kafka-connect-custom:main
 
-      - name: Prepare SSH
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+      - name: Build & push src-faker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./services/source_db/faker
+          file: ./services/source_db/faker/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/src-faker:${{ env.TAG }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/src-faker:main
 
-          cat > ~/.ssh/id_ed25519 <<'KEY'
-          ${{ secrets.SSH_PRIVATE_KEY }}
-          KEY
-          sed -i 's/\r$//' ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keygen -y -f ~/.ssh/id_ed25519 >/dev/null
-
-      - name: Upload compose + env and restart stack
+      - name: Deploy via Helm
         shell: bash
         run: |
           set -euo pipefail
 
-          scp -i ~/.ssh/id_ed25519 docker-compose.yml \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/docker-compose.yml
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
 
-          ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            "set -euo pipefail;
-             export COMPOSE_PROJECT_NAME=app;
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-             sudo mkdir -p /opt/app;
-             sudo install -o root -g root -m 0644 /tmp/docker-compose.yml /opt/app/docker-compose.yml;
-             sudo rm -f /tmp/docker-compose.yml;
+          kubectl delete job minio-init airflow-init flyway -n data-platform --ignore-not-found=true
 
-             # Update TAG without nuking other env vars
-             sudo touch /opt/app/.env;
-             sudo sed -i '/^TAG=/d' /opt/app/.env;
-             echo 'TAG=${{ env.TAG }}' | sudo tee -a /opt/app/.env >/dev/null;
+          cat > /tmp/values.secret.yaml <<'EOF'
+          ${{ secrets.HELM_VALUES_SECRET }}
+          EOF
 
-             cd /opt/app;
-
-             # Stop this compose project cleanly first
-             sudo docker compose -p app down --remove-orphans || true;
-
-             # If *anything* is still publishing 8080, kill it (even from other projects)
-             sudo docker ps -q --filter 'publish=8080' | xargs -r sudo docker rm -f || true;
-
-             # Sanity check: show what's listening (optional, but useful in logs)
-             sudo ss -lntp | grep ':8080' || true;
-
-             sudo docker compose -p app pull;
-             sudo docker compose -p app up -d --remove-orphans --force-recreate;
-
-             sudo docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
+          helm upgrade --install data-platform ./k8s \
+            --namespace data-platform \
+            --create-namespace \
+            -f /tmp/values.secret.yaml

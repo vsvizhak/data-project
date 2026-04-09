@@ -1,0 +1,283 @@
+# ─── MinIO ───────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: minio-pv
+spec:
+  capacity:
+    storage: 20Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /data/minio
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - {{ .Values.nodes.trino }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-pvc
+  namespace: data-platform
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  volumeName: minio-pv
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  namespace: data-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: {{ .Values.nodes.trino }}
+      containers:
+        - name: minio
+          image: {{ .Values.images.minio }}
+          command: ["minio", "server", "/data", "--console-address", ":9001"]
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: minio-access-key
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: minio-secret-key
+          ports:
+            - containerPort: 9000
+            - containerPort: 9001
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: minio-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  namespace: data-platform
+spec:
+  selector:
+    app: minio
+  ports:
+    - name: api
+      port: 9000
+      targetPort: 9000
+    - name: console
+      port: 9001
+      targetPort: 9001
+---
+# MinIO init — створює bucket warehouse
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-init
+  namespace: data-platform
+spec:
+  template:
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: {{ .Values.nodes.trino }}
+      restartPolicy: OnFailure
+      containers:
+        - name: mc
+          image: {{ .Values.images.mc }}
+          env:
+            - name: MC_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: minio-access-key
+            - name: MC_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: minio-secret-key
+          command:
+            - /bin/sh
+            - -c
+            - |
+              until mc alias set minio http://minio:9000 $MC_ACCESS_KEY $MC_SECRET_KEY; do
+                echo "waiting for minio..." && sleep 2
+              done
+              mc mb --ignore-existing minio/warehouse
+              mc anonymous set public minio/warehouse
+---
+# ─── Iceberg REST catalog ─────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iceberg-rest
+  namespace: data-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: iceberg-rest
+  template:
+    metadata:
+      labels:
+        app: iceberg-rest
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: {{ .Values.nodes.trino }}
+      containers:
+        - name: iceberg-rest
+          image: {{ .Values.images.icebergRest }}
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: minio-access-key
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: minio-secret-key
+            - name: AWS_REGION
+              value: us-east-1
+            - name: CATALOG_WAREHOUSE
+              value: s3://warehouse/
+            - name: CATALOG_IO__IMPL
+              value: org.apache.iceberg.aws.s3.S3FileIO
+            - name: CATALOG_S3_ENDPOINT
+              value: http://minio:9000
+          ports:
+            - containerPort: 8181
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: iceberg-rest
+  namespace: data-platform
+spec:
+  selector:
+    app: iceberg-rest
+  ports:
+    - port: 8181
+      targetPort: 8181
+---
+# ─── Postgres source ──────────────────────────────────────────────────────────
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgres-source-pv
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /data/postgres-source
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - {{ .Values.nodes.airflow }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-source-pvc
+  namespace: data-platform
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  volumeName: postgres-source-pv
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-source
+  namespace: data-platform
+spec:
+  serviceName: postgres-source
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-source
+  template:
+    metadata:
+      labels:
+        app: postgres-source
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: {{ .Values.nodes.airflow }}
+      containers:
+        - name: postgres
+          image: {{ .Values.images.postgresSource }}
+          args:
+            - -c
+            - wal_level=logical
+            - -c
+            - max_replication_slots=5
+            - -c
+            - max_wal_senders=5
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: pg-user
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: pg-password
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: pg-dbname
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: postgres-source-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-source
+  namespace: data-platform
+spec:
+  selector:
+    app: postgres-source
+  ports:
+    - port: 5432
+      targetPort: 5432
